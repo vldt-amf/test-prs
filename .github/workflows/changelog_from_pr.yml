@@ -22,7 +22,13 @@ jobs:
       - name: Set PYTHONPATH
         run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
+      - name: 🧪 Confirm PYTHONPATH and files
+        run: |
+          echo $PYTHONPATH
+          ls -la $PYTHONPATH/scripts
 
+
+      
       # - name: 📦 Install dependencies
       #   run: |
       #     pip install -e .  # vh_core must be installable
