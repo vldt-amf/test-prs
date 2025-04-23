@@ -19,10 +19,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 📦 Install dependencies
-        run: |
-          pip install -e .  # vh_core must be installable
-          pip install pandas
+      # - name: 📦 Install dependencies
+      #   run: |
+      #     pip install -e .  # vh_core must be installable
+      #     pip install pandas
 
       - name: 🧠 Extract PR info and run log script
         env:
