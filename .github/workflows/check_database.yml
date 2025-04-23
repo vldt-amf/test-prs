@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '0 13 * * 1-5'  # 8 AM CT during Standard Time, 7 AM CT during Daylight Saving Time
   workflow_dispatch:  # optional: lets you run it manually from the UI
-
+change
 permissions:
   id-token: write
   contents: write
