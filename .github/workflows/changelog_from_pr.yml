@@ -9,7 +9,6 @@ on:
 jobs:
   log-changelog:
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.body, '<!-- changelog: true -->')
 
     steps:
       - name: 📥 Checkout repo
@@ -33,4 +32,3 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_COMMIT: ${{ github.event.pull_request.head.sha }}
         run: python .github/scripts/pr_log_changelog.py
-
