@@ -8,28 +8,29 @@ on:
 
 jobs:
   log-changelog:
-    if: contains(github.event.pull_request.body, '<!-- changelog: true -->')
     runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.body, '<!-- changelog: true -->')
 
     steps:
-    - name: 📥 Checkout repo
-      uses: actions/checkout@v4
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
 
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.10
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
 
-    - name: 📦 Install dependencies
-      run: |
-        pip install -e .  # vh_core must be installable
-        pip install pandas
+      - name: 📦 Install dependencies
+        run: |
+          pip install -e .  # vh_core must be installable
+          pip install pandas
 
-    - name: 🧠 Extract PR info and run log script
-      env:
-        PR_BODY: ${{ github.event.pull_request.body }}
-        PR_BRANCH: ${{ github.head_ref }}
-        PR_REPO: ${{ github.repository }}
-        PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-        PR_COMMIT: ${{ github.event.pull_request.head.sha }}
-      run: python .github/scripts/pr_log_changelog.py
+      - name: 🧠 Extract PR info and run log script
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.head_ref }}
+          PR_REPO: ${{ github.repository }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: python .github/scripts/pr_log_changelog.py
+
