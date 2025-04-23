@@ -1,0 +1,44 @@
+name: Update deliv status by developer
+
+on:
+  schedule:
+    - cron: '0 13 * * 1-5'  # 8 AM CT during Standard Time, 7 AM CT during Daylight Saving Time
+  workflow_dispatch:  # optional: lets you run it manually from the UI
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  update_deliv_status:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout vh_core repository
+      uses: actions/checkout@v4
+      with:
+        repository: 'validatehealth/vh_core'
+        ref: ${{ github.head_ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11.6' # make sure to update this when we upgrade to 3.11
+
+    # the most secure way to do this is by using STS and federated access with Github's OIDC
+    # however, i can't get it to work so I pass in my keys as secrets
+    - name: Install vh_core dependencies
+      run: |
+        grep -v 'python-magic-bin' new_requirements.txt | pip install -r /dev/stdin
+        pip install git+https://github.com/julian-r/python-magic.git
+    - name: Run Slack delivery status script
+      run: python vh_core/genr_slack_deliv_status.py
+      env:
+        GITHUB_TOKEN: ${{ secrets.WORKFLOWS_TOKEN }}
+        SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

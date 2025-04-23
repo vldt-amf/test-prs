@@ -1,0 +1,117 @@
+name: Check database free space
+
+on:
+  schedule:
+    - cron: '0 13 * * 1-5'  # 8 AM CT during Standard Time, 7 AM CT during Daylight Saving Time
+  workflow_dispatch:  # optional: lets you run it manually from the UI
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  check_database:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout vh_core repository
+      uses: actions/checkout@v4
+      with:
+        repository: 'validatehealth/vh_core'
+        ref: ${{ github.head_ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11.6' # make sure to update this when we upgrade to 3.11
+
+    - name: Assume AWS role for S3 access
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: us-east-2
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        audience: sts.amazonaws.com
+        managed-session-policies: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+    - name: Copy Florence credentials from S3
+      run: |
+        aws s3 cp s3://vldt-admin/infrastructure/config/ ~/.ssh --recursive --exclude '*' --include '*pg16*'
+        aws s3 cp s3://vldt-admin/infrastructure/config/ ~/.ssh --recursive --exclude '*' --include 'florence_ssh.key'
+        chmod 0400 ~/.ssh/florence_ssh.key
+
+    - name: Install vh_core dependencies
+      run: |
+        grep -v 'python-magic-bin' new_requirements.txt | pip install -r /dev/stdin
+        pip install git+https://github.com/julian-r/python-magic.git
+
+    - name: Write to vh_env_config.yml and google_secret.json
+      run: |
+          cat << EOF > $GITHUB_WORKSPACE/config/vh_env_config.yml
+          # --- all environments ---
+          whoami: 'github_action'  # personal identifier, usually your 3 letter initials
+          vh_db_config_id: 'florence-2'  # id of the database connection you wish to use
+          db_config_file: '~/.ssh/vh_db_config.yml'  # location of your vh_db_config.yml file
+          db_connect_lib: 'psycopg2' # psycopg2 OR sqlalchemy
+          # --- tibco scraper ---
+          tibco_user: '*********'
+          tibco_password: '*********'
+          # --- slack notifications ---
+          user_slack_token: '${{ secrets.SLACK_USER_TOKEN }}'
+          slack_airflow_token: '${{ secrets.SLACK_AIRFLOW_TOKEN }}'
+          slack_token: '${{ secrets.SLACK_BOT_TOKEN }}'
+          slack_airflow_token: '${{ secrets.SLACK_AIRFLOW_TOKEN }}'
+          github_token: '${{ secrets.WORKFLOWS_TOKEN }}'
+          # ------------------------------
+          #     Level 	Numeric value
+          # ------------------------------
+          #     CRITICAL 	    50
+          #     ERROR 	    40
+          #     WARNING 	    30
+          #     INFO 	        20
+          #     DEBUG 	    10
+          #     NOTSET 	    0
+          # ------------------------------
+          notify_threshold: 20
+          working_directory: '$GITHUB_WORKSPACE'
+          connect_to_google: True
+          EOF
+
+    - name: Configure vh_db_config and vh_env_config
+      run: |
+          cp $GITHUB_WORKSPACE/config/vh_db_config_example.yml ~/.ssh/vh_db_config.yml
+          python3 -u -c "
+          import yaml
+          import os
+
+          config_file_path = os.path.expanduser('~/.ssh/vh_db_config.yml')
+
+          with open(config_file_path, 'r') as file:
+              config = yaml.safe_load(file)
+
+          config['florence-2']['username'] = os.getenv('USERNAME_SECRET', '')
+          config['florence-2']['password'] = os.getenv('PASSWORD_SECRET', '')
+
+          with open(config_file_path, 'w') as file:
+              yaml.dump(config, file)
+          "
+          sudo chmod 400 ~/.ssh/pg16*
+          cat ~/.ssh/vh_db_config.yml
+      env:
+          USERNAME_SECRET: ${{ secrets.FLORENCE_USERNAME }}
+          PASSWORD_SECRET: ${{ secrets.FLORENCE_PASSWORD }}
+
+    # the most secure way to do this is by using STS and federated access with Github's OIDC
+    # however, i can't get it to work so I pass in my keys as secrets
+
+    - name: Run Slack delivery status script
+      run: python vh_core/genr_slack_filesystem_status.py
+      env:
+        GITHUB_TOKEN: ${{ secrets.WORKFLOWS_TOKEN }}
+        SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

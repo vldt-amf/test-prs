@@ -1,0 +1,10 @@
+{
+    "pull_request": {
+      "head": {
+        "ref": "9039-psyconnect-only-sv413"
+      },
+      "base": {
+        "ref": "dev-master"
+      }
+    }
+  }

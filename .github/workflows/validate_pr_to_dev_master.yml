@@ -1,0 +1,182 @@
+name: Validate dev-master deployment
+
+on:
+  pull_request:
+    branches:
+      - 'dev-master'
+      - 'dev-master-stable'
+      - 'dev-master-upgrade'
+      - 'master'
+      - 'master-upgrade'
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    # uncomment this when testing locally using nektos/act
+    # in the future, this should be abstracted into a Dockerfile
+    # perhaps the rest of the steps should be abstracted into a Dockerfile as well
+    # - name: Install AWS CLI
+    #   run: |
+    #     echo $GITHUB_WORKSPACE
+    #     curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    #     unzip awscliv2.zip
+    #     sudo ./aws/install
+
+    - name: Checkout vh_core repository
+      uses: actions/checkout@v4
+      with:
+        repository: 'validatehealth/vh_core'
+        ref: ${{ github.head_ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11.6' # make sure to update this when we upgrade to 3.11
+
+    # This should abstract the process of setting up vh_core, but it doesn't work yet.
+    # When this is fixed or a Dockerfile is created which replicates vh_core, this/that should be used.
+    # - name: Set up vh_core
+    #   uses: $GITHUB_WORKSPACE/.github/actions/setup_env@8911-airflow-cicd-sv411
+    #   with:
+    #     slack_user_token: ${{ secrets.SLACK_USER_TOKEN }}
+    #     slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     token_dot_json: ${{ secrets.TOKEN_DOT_JSON }}
+    #     google_secret_dot_json: ${{ secrets.GOOGLE_SECRET_DOT_JSON }}
+    #     florence_username: ${{ secrets.FLORENCE_USERNAME }}
+    #     florence_password: ${{ secrets.FLORENCE_PASSWORD }}
+
+    # the most secure way to do this is by using STS and federated access with Github's OIDC
+    # however, i can't get it to work so I pass in my keys as secrets
+    - name: Assume AWS role for S3 access
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: us-east-2
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        audience: sts.amazonaws.com
+        managed-session-policies: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+    - name: Copy Florence credentials from S3
+      run: |
+        aws s3 cp s3://vldt-admin/infrastructure/config/ ~/.ssh --recursive --exclude '*' --include '*pg16*'
+
+    - name: Install vh_core dependencies
+      run: |
+        grep -v 'python-magic-bin' new_requirements.txt | pip install -r /dev/stdin
+        pip install git+https://github.com/julian-r/python-magic.git
+
+    - name: Install dags
+      run: |
+        python3 -m pip install -e vh_core/dags
+
+    - name: Write to vh_env_config.yml and google_secret.json
+      run: |
+          cat << EOF > $GITHUB_WORKSPACE/config/vh_env_config.yml
+          # --- all environments ---
+          whoami: 'github_action'  # personal identifier, usually your 3 letter initials
+          vh_db_config_id: 'florence-2'  # id of the database connection you wish to use
+          db_config_file: '~/.ssh/vh_db_config.yml'  # location of your vh_db_config.yml file
+          db_connect_lib: 'psycopg2' # psycopg2 OR sqlalchemy
+          # --- tibco scraper ---
+          tibco_user: '*********'
+          tibco_password: '*********'
+          # --- slack notifications ---
+          user_slack_token: '${{ secrets.SLACK_USER_TOKEN }}'
+          slack_airflow_token: '${{ secrets.SLACK_AIRFLOW_TOKEN }}'
+          slack_token: '${{ secrets.SLACK_BOT_TOKEN }}'
+          slack_airflow_token: '${{ secrets.SLACK_AIRFLOW_TOKEN }}'
+          github_token: '${{ secrets.WORKFLOWS_TOKEN }}'
+          # ------------------------------
+          #     Level 	Numeric value
+          # ------------------------------
+          #     CRITICAL 	    50
+          #     ERROR 	    40
+          #     WARNING 	    30
+          #     INFO 	        20
+          #     DEBUG 	    10
+          #     NOTSET 	    0
+          # ------------------------------
+          notify_threshold: 20
+          working_directory: '$GITHUB_WORKSPACE'
+          connect_to_google: True
+          EOF
+
+    - name: Write google secrets to token.json and google_secret.json
+      run: |
+          echo '${{ secrets.TOKEN_DOT_JSON }}' > $GITHUB_WORKSPACE/token.json
+          mkdir -p ~/.config/gspread_pandas/
+          echo '${{ secrets.GOOGLE_SECRET_DOT_JSON }}' > ~/.config/gspread_pandas/google_secret.json
+          chmod 644 ~/.config/gspread_pandas/google_secret.json
+
+    - name: Configure vh_db_config and vh_env_config
+      run: |
+          cp $GITHUB_WORKSPACE/config/vh_db_config_example.yml ~/.ssh/vh_db_config.yml
+          python3 -u -c "
+          import yaml
+          import os
+
+          config_file_path = os.path.expanduser('~/.ssh/vh_db_config.yml')
+
+          with open(config_file_path, 'r') as file:
+              config = yaml.safe_load(file)
+
+          config['florence-2']['username'] = os.getenv('USERNAME_SECRET', '')
+          config['florence-2']['password'] = os.getenv('PASSWORD_SECRET', '')
+
+          with open(config_file_path, 'w') as file:
+              yaml.dump(config, file)
+          "
+          sudo chmod 400 ~/.ssh/pg16*
+          cat ~/.ssh/vh_db_config.yml
+      env:
+          USERNAME_SECRET: ${{ secrets.FLORENCE_USERNAME }}
+          PASSWORD_SECRET: ${{ secrets.FLORENCE_PASSWORD }}
+
+
+    # regretablly, i think it's impossible to run this step when testing locally.
+    # i believe it is because docker containers don't have access to the host system's devices
+    # /dev/net/tun is a a virtual network kernel device that is used by openvpn
+    # ergo, when testing locally, you must connect to the VPN manually and comment this out.
+
+    - name: Set up OpenVPN
+      run: |
+        sudo apt-get update && sudo apt-get install -y openvpn inetutils-ping
+        git clone https://github.com/jonathanio/update-systemd-resolved.git
+        sudo make -C update-systemd-resolved
+        sudo chmod +x /usr/local/libexec/openvpn/update-systemd-resolved
+        sudo mv /usr/local/libexec/openvpn/update-systemd-resolved /etc/openvpn/update-resolv-conf
+
+        echo ${{ secrets.VPN_CONFIG }} | base64 --decode > config.ovpn
+        echo "${{ secrets.VPN_USERNAME }}" > auth.txt
+        echo "${{ secrets.VPN_PASSWORD }}" >> auth.txt
+        chmod 600 auth.txt
+
+        sudo openvpn --auth-retry nointeract --connect-retry-max 5 --verb 4 --config config.ovpn --auth-user-pass auth.txt --daemon --log /dev/stdout
+
+    - name: Run build_dags.py
+      run: |
+        python -u $GITHUB_WORKSPACE/vh_core/dags/build_dags_prod/build_dags_prod.py
+
+    - name: Run mypy for type checking
+      run: |
+        python3 -m pip install types-requests
+        python3 -m pip install types-pytz
+        python3 -m pip install types-PyYAML
+        mypy vh_core
+
+    - name: Run pytest for testing
+      run: |
+        pytest tests/unit_test --no-testmon
