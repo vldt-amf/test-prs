@@ -54,6 +54,7 @@ values = {
     "logged_by": author,
 }
 
+print(values)
 # Log to DB
 # db = db_connection.try_connect(
 #     connect_name=db_connection.DB_CONNECT_NAME,
