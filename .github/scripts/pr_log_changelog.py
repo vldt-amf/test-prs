@@ -3,7 +3,7 @@ import os
 import re
 from datetime import date
 
-# hi! hello! hey there! one more! one one more! one one one. another hi. another another hi.
+# hi! hello! hey there! one more! one one more! one one one. another hi. another another hi. another hihihi.
 
 from scripts.generate_changelog import (
     get_sprint_id,
