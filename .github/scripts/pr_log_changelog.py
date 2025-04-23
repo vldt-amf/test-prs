@@ -7,13 +7,13 @@ from datetime import date
 
 from scripts.generate_changelog import (
     get_sprint_id,
-    build_insert_sql,
+    # build_insert_sql,
     get_github_issue_url,
-    merge_change_log_md,
-    auto_git_commit_push,
+    # merge_change_log_md,
+    # auto_git_commit_push,
 )
-from vh_core import db_connection
-from vh_core.db_connection import DB_CONNECT_TYPE
+# from vh_core import db_connection
+# from vh_core.db_connection import DB_CONNECT_TYPE
 
 
 pr_body = os.environ.get("PR_BODY", "")
@@ -55,13 +55,13 @@ values = {
 }
 
 # Log to DB
-db = db_connection.try_connect(
-    connect_name=db_connection.DB_CONNECT_NAME,
-    connect_type=db_connection.ConnectType(DB_CONNECT_TYPE),
-)
-sql = build_insert_sql("sources_apcd.change_log_all_hist", values)
-db.execute(sql_str=sql)
+# db = db_connection.try_connect(
+#     connect_name=db_connection.DB_CONNECT_NAME,
+#     connect_type=db_connection.ConnectType(DB_CONNECT_TYPE),
+# )
+# sql = build_insert_sql("sources_apcd.change_log_all_hist", values)
+# db.execute(sql_str=sql)
 
 # Update markdown
-merge_change_log_md()
-auto_git_commit_push("product_changelog.md")
+# merge_change_log_md()
+# auto_git_commit_push("product_changelog.md")
