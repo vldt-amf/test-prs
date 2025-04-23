@@ -13,18 +13,8 @@ from datetime import date, timedelta
 import subprocess
 # from vh_core import db_connection
 # from vh_core.db_connection import DB_CONNECT_TYPE
-import pandas as pd
+
 import re
-import psycopg2
-
-conn = psycopg2.connect(
-    host='ec2-18-223-194-252.us-east-2.compute.amazonaws.com',
-    port="5432",
-    user='airflow',
-    password='G7x@pV9zQ1#t',
-    dbname="apcd"
-)
-
 
 def get_sprint_id(entry_date: date) -> str:
     first_sprint_start = date(2025, 1, 6)  # Sv5.1.1
