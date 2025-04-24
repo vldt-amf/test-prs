@@ -38,6 +38,7 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_BRANCH: ${{ github.head_ref }}
+          PR_MASTER_BRANCH: ${{ github.base_ref }}
           PR_REPO: ${{ github.repository }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_COMMIT: ${{ github.event.pull_request.head.sha }}
