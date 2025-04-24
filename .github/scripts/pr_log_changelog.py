@@ -17,6 +17,7 @@ from scripts.generate_changelog import (
 
 
 pr_body = os.environ.get("PR_BODY", "")
+master_branch = os.environ.get("PR_MASTER_BRANCH","")
 branch = os.environ.get("PR_BRANCH", "")
 repo = os.environ.get("PR_REPO", "")
 author = os.environ.get("PR_AUTHOR", "github-action")
@@ -44,7 +45,7 @@ if not (summary and impact and products):
 
 values = {
     "branch": branch,
-    "master-branch": pr_body, # this one is new
+    "master-branch": master_branch, # this one is new
     "repo": repo, #this is also new
     "git_commit_hash": commit,
     "summary_changes": summary,
