@@ -3,7 +3,7 @@ import os
 import re
 from datetime import date
 
-# hi! hello! hey there! one more! one one more! one one one. another hi. another another hi. another hihihi. hi.
+# hi! hello! hey there! one more! one one more! one one one. another hi. another another hi. another hihihi. hi. hi.
 
 from scripts.generate_changelog import (
     get_sprint_id,
@@ -44,6 +44,8 @@ if not (summary and impact and products):
 
 values = {
     "branch": branch,
+    "master-branch": pr_body, # this one is new
+    "repo": repo, #this is also new
     "git_commit_hash": commit,
     "summary_changes": summary,
     "impact_summary": impact,
@@ -55,14 +57,3 @@ values = {
 }
 
 print(values)
-# Log to DB
-# db = db_connection.try_connect(
-#     connect_name=db_connection.DB_CONNECT_NAME,
-#     connect_type=db_connection.ConnectType(DB_CONNECT_TYPE),
-# )
-# sql = build_insert_sql("sources_apcd.change_log_all_hist", values)
-# db.execute(sql_str=sql)
-
-# Update markdown
-# merge_change_log_md()
-# auto_git_commit_push("product_changelog.md")

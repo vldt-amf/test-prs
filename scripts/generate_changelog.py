@@ -151,28 +151,6 @@ def merge_change_log_md(
     Reads change log entries from the given table and generates a grouped markdown changelog file.
     """
 
-    # Connect to the database
-    conn = psycopg2.connect(
-        host='ec2-18-223-194-252.us-east-2.compute.amazonaws.com',
-        port="5432",
-        user='airflow',
-        password='G7x@pV9zQ1#t',
-        dbname="apcd"
-    )
-
-    # Query the change log table
-    df = db.execute_into_df(
-        f"""
-        SELECT
-            sprint_number,
-            entry_date,
-            summary_changes,
-            impact_summary,
-            impact_project
-        FROM {table_name}
-        ORDER BY sprint_number DESC, impact_project ASC, entry_date DESC
-        """
-    )
 
     if df.empty:
         print("⚠️ No records found in change log table.")
