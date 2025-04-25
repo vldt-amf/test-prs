@@ -10,10 +10,9 @@
 > If you complete **all the fields below**, this information will be automatically saved to a separate Markdown file for improved traceability.  
 > This helps **SMEs track product-impacting changes** more easily across releases.
 
+
 ## 📝 Summary of Changes  
 <!-- summary_changes: Start here -->
-
-
 
 
 ## 💥 Impact Summary  
