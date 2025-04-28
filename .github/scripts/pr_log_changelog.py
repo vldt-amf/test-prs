@@ -3,7 +3,7 @@ import os
 import re
 from datetime import date
 
-# hi! hello! hey there! one more! one one more! one one one. another hi. another another hi. another hihihi. hi. hi. hi. hi. hi.
+#wassup hi
 
 from scripts.generate_changelog import (
     get_sprint_id,
@@ -25,7 +25,7 @@ commit = os.environ.get("PR_COMMIT", "")
 entry_date = date.today()
 sprint_number = get_sprint_id(entry_date)
 github_issue_url = get_github_issue_url(branch, repo)
-
+products = os.environ.get("PR_LABELS", "")
 
 def extract(tag: str) -> str:
     match = re.search(
@@ -36,7 +36,7 @@ def extract(tag: str) -> str:
 
 summary = extract("summary_changes")
 impact = extract("impact_summary")
-products = extract("impact_project")
+
 
 if not (summary and impact and products):
     print("One or more required fields are empty — skipping changelog log.")
