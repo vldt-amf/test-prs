@@ -3,7 +3,7 @@ import os
 import re
 from datetime import date
 
-#wassup hi hey
+#wassup hi hey hi
 
 from scripts.generate_changelog import (
     get_sprint_id,
