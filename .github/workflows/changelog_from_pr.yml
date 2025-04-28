@@ -42,4 +42,5 @@ jobs:
           PR_REPO: ${{ github.repository }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_COMMIT: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS: ${{ github.event.pull_request.labels }}
         run: python .github/scripts/pr_log_changelog.py
